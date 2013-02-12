@@ -16,4 +16,6 @@ Gem::Specification.new do |gem|
   gem.name          = "activerecord-vertica-adapter"
   gem.require_paths = ["lib"]
   gem.version       = "0.1.0"
+
+  gem.add_dependency 'vertica', '>= 0.9.4'
 end
