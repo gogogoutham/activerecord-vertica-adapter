@@ -8,20 +8,11 @@ module ActiveRecord
     # Establishes a connection to the database that's used by all Active Record objects
     def self.vertica_connection(config) # :nodoc:
       config = config.symbolize_keys
-      host     = config[:host]
-      port     = config[:port] || 5433
-      username = config[:username].to_s if config[:username]
-      password = config[:password].to_s if config[:password]
-      ssl      = config[:ssl].to_s if config[:ssl]
-      if config.key?(:database)
-        database = config[:database]
-      else
-        raise ArgumentError, "No database specified. Missing argument: database."
-      end
+      config[:user] = config[:username].to_s if config[:username]
 
       # The vertica drivers don't allow the creation of an unconnected object,
       # so just pass a nil connection object for the time being.
-      ConnectionAdapters::VerticaAdapter.new(nil, logger, [host, port, database, username, password, ssl, nil], config)
+      ConnectionAdapters::VerticaAdapter.new(nil, logger, config)
     end
   end
 
@@ -250,9 +241,9 @@ module ActiveRecord
       end
 
       # Initializes and connects a Vertica adapter.
-      def initialize(connection, logger, connection_parameters, config)
+      def initialize(connection, logger, config)
         super(connection, logger)
-        @connection_parameters, @config = connection_parameters, config
+        @config = config
 
         # @local_tz is initialized as nil to avoid warnings when connect tries to use it
         @local_tz = nil
@@ -326,7 +317,7 @@ module ActiveRecord
 
       # Quotes strings for use in SQL input.
       def quote_string(s) #:nodoc:
-        @connection.escape(s)
+        Vertica.quote(s)
       end
 
       # Checks the following cases:
@@ -350,8 +341,7 @@ module ActiveRecord
 
       # Quotes column names for use in SQL queries.
       def quote_column_name(name) #:nodoc:
-        "\"#{name}\""
-        #query("SELECT QUOTE_IDENT('#{name}')")[0][0]
+        Vertica.quote_identifier(name)
       end
 
       # Quote date/time values for use in SQL input. Includes microseconds
@@ -398,14 +388,14 @@ module ActiveRecord
       # Queries the database and returns the results in an Array-like object
       def query(sql, name = nil) #:nodoc:
         log(sql, name) do
-          @connection.execute(sql).rows
+          @connection.query(sql).rows
         end
       end
 
       # Executes an SQL statement, returning a result object on success
       def execute(sql, name = nil, &block)
         log(sql, name) do
-          @connection.execute(sql, &block)
+          @connection.query(sql, &block)
         end
       end
 
@@ -752,7 +742,7 @@ module ActiveRecord
         # Connects to a Vertica server and sets up the adapter depending on the
         # connected server's characteristics.
         def connect
-          @connection = Vertica::Connection.new(*@connection_parameters)
+          @connection = Vertica::Connection.new(@config)
           Vertica.translate_results = false if Vertica.respond_to?(:translate_results=)
 
           # Ignore async_exec and async_query when using postgres-pr.
