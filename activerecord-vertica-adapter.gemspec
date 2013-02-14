@@ -18,4 +18,6 @@ Gem::Specification.new do |gem|
   gem.version       = "0.1.0"
 
   gem.add_dependency 'vertica', '>= 0.9.4'
+  gem.add_dependency 'activerecord', '>= 3.2'
+  gem.add_development_dependency 'rspec'
 end

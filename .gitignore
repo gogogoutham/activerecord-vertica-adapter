@@ -11,8 +11,8 @@ doc/
 lib/bundler/man
 pkg
 rdoc
+spec/connection.yml
 spec/reports
 test/tmp
 test/version_tmp
 tmp
-
