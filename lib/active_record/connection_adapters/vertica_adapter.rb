@@ -317,7 +317,7 @@ module ActiveRecord
 
       # Quotes strings for use in SQL input.
       def quote_string(s) #:nodoc:
-        Vertica.quote(s)
+        Vertica.quote(s)[1..-2]
       end
 
       # Checks the following cases:

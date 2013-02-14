@@ -65,4 +65,14 @@ describe ActiveRecord::ConnectionAdapters::VerticaAdapter do
       connection.update_sql("UPDATE public.test SET name = 'test'").should == 2
     end
   end
+
+  describe "#quote_string" do
+    it "quotes the string without surrouding quotes" do
+      connection.quote_string("quote'd").should == "quote''d"
+    end
+
+    it "returns identical string when no quoting is required" do
+      connection.quote_string("quote").should == "quote"
+    end
+  end
 end
