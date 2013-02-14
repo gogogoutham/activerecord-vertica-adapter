@@ -8,11 +8,15 @@ describe ActiveRecord::ConnectionAdapters::VerticaAdapter do
     CREATE TABLE public.test2 ( "id" INTEGER, "name" VARCHAR );
     INSERT INTO public.test VALUES (1, 'first');
     INSERT INTO public.test VALUES (2, 'second');
+    CREATE SCHEMA test;
+    CREATE TABLE test.test ( "id" INTEGER, "is" BOOL );
+    CREATE TABLE test.test2 ( "id" INTEGER, "is" BOOL );
     sql
   end
   after(:all) do
     connection.query <<-sql
-    DROP TABLE IF EXISTS public.test, public.test2;
+    DROP TABLE IF EXISTS public.test, public.test2, test.test, test.test2;
+    DROP SCHEMA test;
     sql
   end
 
@@ -30,7 +34,26 @@ describe ActiveRecord::ConnectionAdapters::VerticaAdapter do
 
   describe "#tables" do
     it "returns all tables in public schema" do
-      connection.tables.should == ["test", "test2"]
+      connection.tables("public").should == ["public.test", "public.test2"]
+    end
+
+    it "returns all tables in all schemas" do
+      connection.tables.should == ["public.test", "public.test2", "test.test", "test.test2"]
+      connection.tables(%w(public test)).should == ["public.test", "public.test2", "test.test", "test.test2"]
+    end
+  end
+
+  describe "#columns" do
+    it "returns all columns in table" do
+      id = ActiveRecord::ConnectionAdapters::VerticaColumn.new("id", "", "int", false)
+      is =  ActiveRecord::ConnectionAdapters::VerticaColumn.new("is", "", "boolean", false)
+      connection.columns("test.test").should == [id, is]
+    end
+
+    it "returns all columns in table in public schema" do
+      id = ActiveRecord::ConnectionAdapters::VerticaColumn.new("id", "", "int", false)
+      name =  ActiveRecord::ConnectionAdapters::VerticaColumn.new("name", "", "varchar(80)", false)
+      connection.columns("test").should == [id, name]
     end
   end
 

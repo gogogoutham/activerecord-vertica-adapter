@@ -62,6 +62,10 @@ module ActiveRecord
       end
       # :startdoc:
 
+      def ==(other)
+        name == other.name && default == other.default && sql_type == other.sql_type && null == other.null
+      end
+
       private
         def extract_limit(sql_type)
           case sql_type
@@ -490,11 +494,11 @@ module ActiveRecord
       end
 
       # Returns the list of all tables in the schema search path or a specified schema.
-      def tables(name = nil)
-        query(<<-SQL, name).map { |row| row[:table_name] }
-          SELECT table_name
+      def tables(schema = nil, name = nil)
+        query(<<-SQL, name).map { |row| row[:table_schema] + "." + row[:table_name] }
+          SELECT table_schema, table_name
           FROM v_catalog.tables
-          WHERE table_schema = 'public'
+          #{"WHERE table_schema IN(#{Vertica.quote schema})" if schema}
         SQL
       end
 
@@ -522,8 +526,8 @@ module ActiveRecord
       # Returns the list of all column definitions for a table.
       def columns(table_name, name = nil)
         # Limit, precision, and scale are all handled by the superclass.
-        column_definitions(table_name).collect do |name, type, default, notnull|
-          VerticaColumn.new(name, default, type, notnull == 'false')
+        column_definitions(table_name).collect do |c|
+          VerticaColumn.new(c[:column_name], c[:column_default], c[:data_type], c[:is_nullable] == 'false')
         end
       end
       
