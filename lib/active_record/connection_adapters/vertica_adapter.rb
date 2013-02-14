@@ -402,7 +402,7 @@ module ActiveRecord
       # Executes an UPDATE query and returns the number of affected tuples.
       def update_sql(sql, name = nil)
         result = super
-        result.length == 0 ? 0 : result.rows[0][0]
+        result.length == 0 ? 0 : result.the_value
       end
 
       # Begins a transaction.
@@ -491,7 +491,7 @@ module ActiveRecord
 
       # Returns the list of all tables in the schema search path or a specified schema.
       def tables(name = nil)
-        query(<<-SQL, name).map { |row| row[0] }
+        query(<<-SQL, name).map { |row| row[:table_name] }
           SELECT table_name
           FROM v_catalog.tables
           WHERE table_schema = 'public'
@@ -512,7 +512,7 @@ module ActiveRecord
           schema = nil
         end
 
-        query(<<-SQL).first[0].to_i > 0
+        execute(<<-SQL).the_value.to_i > 0
           SELECT COUNT(*)
           FROM v_catalog.tables
           WHERE table_name = '#{table.gsub(/(^"|"$)/,'')}'
@@ -764,7 +764,7 @@ module ActiveRecord
               execute("SET client_encoding TO '#{@config[:encoding]}'")
             end
           end
-          self.schema_search_path = @config[:schema_search_path] || @config[:schema_order]
+          self.schema_search_path = @config[:search_path] || @config[:schema_search_path] || @config[:schema_order]
 
           # Use standard-conforming strings if available so we don't have to do the E'...' dance.
           set_standard_conforming_strings
