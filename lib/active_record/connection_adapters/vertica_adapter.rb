@@ -255,7 +255,7 @@ module ActiveRecord
         @vertica_version = nil
 
         # Initialize the Arel visitor
-        @visitor = BindSubstitution.new(self)
+        @visitor = unprepared_visitor
 
         connect
         @local_tz = execute('SHOW TIME ZONE')[0][0]
@@ -399,7 +399,8 @@ module ActiveRecord
       # Executes an SQL statement, returning a result object on success
       def execute(sql, name = nil, &block)
         log(sql, name) do
-          @connection.query(sql, &block)
+          res = @connection.query(sql, &block)
+          ActiveRecord::Result.new(res.columns.collect{|c| c.name}, res.rows)
         end
       end
 
@@ -516,7 +517,7 @@ module ActiveRecord
           schema = nil
         end
 
-        execute(<<-SQL).the_value.to_i > 0
+        query(<<-SQL)[0][0].to_i > 0
           SELECT COUNT(*)
           FROM v_catalog.tables
           WHERE table_name = '#{table.gsub(/(^"|"$)/,'')}'
@@ -790,15 +791,7 @@ module ActiveRecord
         # Executes a SELECT query and returns the results, performing any data type
         # conversions that are required to be performed here instead of in VerticaColumn.
         def select(sql, name = nil, binds = [])
-          fields, rows = select_raw(sql, name)
-          rows.map do |row|
-            Hash[*fields.zip(row).flatten]
-          end
-        end
-
-        def select_raw(sql, name = nil)
-          res = execute(sql, name)
-          return res.columns.collect{|c| c.name}, res.rows
+          execute(sql, name, binds).to_a
         end
 
         # Returns the list of a table's column names, data types, and default values.
