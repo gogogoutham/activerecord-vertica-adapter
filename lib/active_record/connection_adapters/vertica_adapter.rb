@@ -399,8 +399,17 @@ module ActiveRecord
       # Executes an SQL statement, returning a result object on success
       def execute(sql, name = nil, &block)
         log(sql, name) do
-          res = @connection.query(sql, &block)
-          ActiveRecord::Result.new(res.columns.collect{|c| c.name}, res.rows)
+          @connection.query(sql, &block)
+        end
+      end
+
+      # Execute a query with results returned
+      def exec_query(sql, name = nil, binds = [])
+        log(sql, name, binds) do
+          res = @connection.query(sql, { :row_style => :array })
+          cols = res.columns.map {|c| c.name}
+          cols = cols.map {|c| c.to_s}
+          ActiveRecord::Result.new(cols, res.rows)
         end
       end
 
@@ -791,7 +800,7 @@ module ActiveRecord
         # Executes a SELECT query and returns the results, performing any data type
         # conversions that are required to be performed here instead of in VerticaColumn.
         def select(sql, name = nil, binds = [])
-          execute(sql, name, binds).to_a
+          exec_query(sql, name, binds).to_a
         end
 
         # Returns the list of a table's column names, data types, and default values.
